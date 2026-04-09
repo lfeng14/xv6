@@ -20,5 +20,7 @@ services to running programs.
     printf("fork error\n");
   }
   ```
+- The xv6 shell uses the above calls to run programs on behalf of users. The main structure of the shell is simple; see main (user/sh.c:146). The main loop reads a line of input from the user with getcmd. Then it calls fork, which creates a copy of the shell process. The parent calls wait, while the child runs the command. For example, if the user had typed “echo hello” to the shell, runcmd would have been called with “echo hello” as the argument. runcmd (user/sh.c:55) runs the actual command. For “echo hello”, it would call exec (user/sh.c:79). If exec succeeds then the child will execute instructions from echo instead of runcmd. At some point echo will call exit, which will cause the parent to return from wait in main (user/sh.c:146).
+- You might wonder why fork and exec are not combined in a single call; we will see later that the shell exploits the separation in its implementation of I/O redirection.
 #### further reading
 - https://github.com/mit-pdos/xv6-riscv/blob/riscv//user/sh.c#L1

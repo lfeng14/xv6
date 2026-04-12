@@ -140,19 +140,35 @@ the kernel suspends the currently running thread and resumes another process’s
 the state of a thread (local variables, function call return addresses) is stored on the thread’s stacks.
 Each process has two stacks: a user stack and a kernel stack (p->kstack).
 - A process can make a system call by executing the RISC-V ecall instruction. This instruction
-raises the hardware privilege level and changes the program counter to a kernel-defined entry point.
+raises the **hardware privilege level** and changes the program counter to a kernel-defined entry point.
 - p->state indicates whether the process is allocated, ready to run, running, waiting for I/O, or
 exiting.
 - p->pagetable holds the process’s page table, in the format that the RISC-V hardware ex-
-pects. Xv6 causes the paging hardware to use a process’s p->pagetable when executing that
+pects. Xv6 causes the **paging hardware** to use a process’s p->pagetable when executing that
 process in user space.
 - 幻相：In summary, a process bundles two design ideas: an address space to give a process the illusion
 of its own memory, and, a thread, to give the process the illusion of its own CPU. In xv6, a process
 consists of one address space and one thread. In real operating systems a process may have more
 than one thread to take advantage of multiple CPUs.
+- The loader loads the xv6 kernel into memory at physical address 0x80000000. The reason it
+places the kernel at 0x80000000 rather than 0x0 is because the address range 0x0:0x80000000
+contains I/O devices.
+The instructions at _entry set up a stack so that xv6 can run C code. Xv6 declares space
+for an initial stack, stack0, in the file start.c (kernel/start.c:11). The code at _entry loads the
+stack pointer register sp with the address stack0+4096, the top of the stack, because the stack
+on RISC-V grows down. Now that the kernel has a stack, _entry calls into C code at start
+
+- 启动过程：
+  - RISC-V 上电后由引导程序加载 xv6 内核至物理地址 0x80000000，在机器模式下从 _entry 启动并初始化栈，进而转入 C 代码 start 函数。
+  - start 完成机器模式下的配置后，通过 mret 指令切换到监管模式，跳转到 main 函数完成设备与子系统初始化，并创建首个用户进程。
+  - 首个进程通过 exec 系统调用启动 /init 程序，最终 init 进程打开控制台并启动 shell，系统正式运行。
+  <img width="1342" height="1412" alt="image" src="https://github.com/user-attachments/assets/286afed7-0e7c-43b9-b4c4-2dd565c33761" />
+
 #### further reading
 - The RISC-V Reader: An Open Architecture Atlas
 - xv6代码导读：https://www.bilibili.com/video/BV1DY4y1a7YD/?vd_source=2211521a84d324c18aba00755ad3bcec
 - The UNMO Time-Sharing System Dennis M. Ritchie and Ken Thompson：https://dl.acm.org/doi/epdf/10.1145/357980.358014
 - https://jyywiki.cn/pages/OS/manuals/unix-v6-book.pdf
 - process max: https://github.com/mit-pdos/xv6-riscv/blob/riscv//kernel/riscv.h#L363
+- entry.S：https://github.com/mit-pdos/xv6-riscv/blob/riscv//kernel/entry.S#L7
+- main.c https://github.com/mit-pdos/xv6-riscv/blob/riscv//kernel/main.c#L11

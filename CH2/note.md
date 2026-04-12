@@ -162,7 +162,7 @@ on RISC-V grows down. Now that the kernel has a stack, _entry calls into C code 
   - RISC-V 上电后由引导程序加载 xv6 内核至物理地址 0x80000000，在机器模式下从 _entry 启动并初始化栈，进而转入 C 代码 start 函数。
   - start 完成机器模式下的配置后，通过 mret 指令切换到监管模式，跳转到 main 函数完成设备与子系统初始化，并创建首个用户进程。
   - 首个进程通过 exec 系统调用启动 /init 程序，最终 init 进程打开控制台并启动 shell，系统正式运行。
-  <img width="1342" height="1412" alt="image" src="https://github.com/user-attachments/assets/286afed7-0e7c-43b9-b4c4-2dd565c33761" />
+  <img width="650" height="700" alt="image" src="https://github.com/user-attachments/assets/286afed7-0e7c-43b9-b4c4-2dd565c33761" />
 
 #### further reading
 - The RISC-V Reader: An Open Architecture Atlas

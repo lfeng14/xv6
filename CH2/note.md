@@ -15,6 +15,7 @@ loops.
 venience and the possibility of strong isolation. The Unix interface is not the only way to abstract
 resources, but it has proven to be a very good one.
   <img width="360" height="150" alt="image" src="https://github.com/user-attachments/assets/534b6319-d991-4740-98ed-8c805aa6f809" />
+  
   <img width="480" height="600" alt="image" src="https://github.com/user-attachments/assets/0f915363-b964-437c-aaa7-5bde8d61bfee" />
 
 - Strong isolation requires a hard boundary between applications and the operating system. If the

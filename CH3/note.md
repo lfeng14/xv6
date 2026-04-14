@@ -1,2 +1,3 @@
 - As a reminder, RISC-V instructions (both user and kernel) manipulate virtual addresses.
 - 相同的虚拟地址 如何通过页表项 映射到不同的物理地址
+  - 这个区分点在CPU的“页表根地址寄存器”里。每个进程的页表有独立的根页表，进程切换时，内核会把当前进程的根页表物理地址写入这个寄存器。这样CPU翻译虚拟地址时，会从当前寄存器指向的根页表开始查找，自然就区分了不同进程的虚拟地址空间。

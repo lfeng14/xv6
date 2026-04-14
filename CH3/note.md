@@ -1,2 +1,2 @@
 - As a reminder, RISC-V instructions (both user and kernel) manipulate virtual addresses.
-- 页表项如何做虚拟地址到物理地址的转换
+- 相同的虚拟地址 如何通过页表项 映射到不同的物理地址

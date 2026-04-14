@@ -14,6 +14,7 @@ loops.
 - 抽象和隔离问题：The system-call interface in Figure 1.2 is carefully designed to provide both programmer con-
 venience and the possibility of strong isolation. The Unix interface is not the only way to abstract
 resources, but it has proven to be a very good one.
+
   <img width="360" height="150" alt="image" src="https://github.com/user-attachments/assets/534b6319-d991-4740-98ed-8c805aa6f809" />
   
   <img width="480" height="600" alt="image" src="https://github.com/user-attachments/assets/0f915363-b964-437c-aaa7-5bde8d61bfee" />
@@ -76,9 +77,11 @@ focuses on these core ideas.
 kernel interface corresponds to the operating system interface, and the kernel implements the com-
 plete operating system. Since xv6 doesn’t provide many services, its kernel is smaller than some
 microkernels, but conceptually xv6 is monolithic.
-<img width="460" height="600" alt="image" src="https://github.com/user-attachments/assets/fa800360-90c3-4b36-b262-42105b521836" />
+
+  <img width="460" height="600" alt="image" src="https://github.com/user-attachments/assets/fa800360-90c3-4b36-b262-42105b521836" />
+  
 - 早期xv6支持多进程，不支持多线程，请问为什么 ？
-  - 这是一个非常经典的问题，触及了操作系统设计的核心权衡。简单来说，xv6 不支持多线程（同一个进程内有多个执行流）并不是因为它做不到，而是因为其**教学目标**和**设计哲学**决定的。xv6 的存在是为了让学生在最短的时间内理解操作系统的核心概念，而“线程”带来的复杂性往往会掩盖这些核心原理。以下是具体的几个原因：
+  - 这是一个非常经典的问题，触及了操作系统设计的核心权衡。简单来说，xv6 不支持多线程（同一个进程内有多个执行流）并不是因为它做不到，而是因为其 **教学目标** 和 **设计哲学** 决定的。xv6 的存在是为了让学生在最短的时间内理解操作系统的核心概念，而“线程”带来的复杂性往往会掩盖这些核心原理。以下是具体的几个原因：
   - 教学的简约性 (Pedagogical Simplicity)。xv6 的首要目标是**易读性**。目前 xv6 的源代码只有几千行，一个学期就能通读。
     * **进程模型简单清晰**：在 xv6 中，`struct proc` 既是资源分配的单位（内存、文件描述符），也是调度的单位。这种“一对一”的关系非常直观。
     * **线程的复杂性**：如果引入多线程，内核需要区分 **进程控制块 (PCB)** 和 **线程控制块 (TCB)**。你需要处理一个进程内多个线程共享地址空间、共享文件描述符的情况，这会增加大量的记账代码（Bookkeeping code）。
@@ -163,6 +166,7 @@ on RISC-V grows down. Now that the kernel has a stack, _entry calls into C code 
   - RISC-V 上电后由引导程序加载 xv6 内核至物理地址 0x80000000，在机器模式下从 _entry 启动并初始化栈，进而转入 C 代码 start 函数。
   - start 完成机器模式下的配置后，通过 mret 指令切换到监管模式，跳转到 main 函数完成设备与子系统初始化，并创建首个用户进程。
   - 首个进程通过 exec 系统调用启动 /init 程序，最终 init 进程打开控制台并启动 shell，系统正式运行。
+  
   <img width="650" height="700" alt="image" src="https://github.com/user-attachments/assets/286afed7-0e7c-43b9-b4c4-2dd565c33761" />
 
 #### further reading

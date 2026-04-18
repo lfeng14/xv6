@@ -33,8 +33,73 @@
 - 内核栈既可通过高端内存映射访问，也可通过直接映射地址访问；若仅采用直接映射，设置保护页需取消虚拟地址映射，会导致物理内存难以正常使用。
   - 内核对跳板页与内核文本页配置`PTE_R`+`PTE_X`权限，用于读取与执行指令；其余页面设为`PTE_R`+`PTE_W`，支持读写操作。
   - 保护页的映射为无效状态。
+- **跳板页**直接映射通常供内核态访问，确保内核能快速找到跳板页；顶部映射则映射到用户态地址空间的高地址，让用户态程序在触发特权级切换时能通过这个地址跳转到内核代码。这种双重映射能兼顾内核态的直接访问需求和用户态到内核态的切换效率。
+- fork 创建子进程时，会复制父进程的页表，但物理内存通过写时复制共享，不会立即开辟新物理页。需要单独为子进程开辟的是内核栈，供子进程进入内核态时使用；还有进程控制块，记录子进程的 PID、状态等信息。用户态虚拟地址空间看似复制，实际物理内存到子进程写入时才分配新页。
+
+ <img width="550" height="380" alt="image" src="https://github.com/user-attachments/assets/a180787b-0420-4a42-a4ed-9fd11340d4b7" />
+ 
+- 调用 **kalloc** 分配物理页，随后向进程的页表中添加指向这些新物理页的页表项（PTE）。Xv6 会在这些页表项中设置 PTE_W、PTE_R、PTE_U 与 PTE_V 标志位。大多数进程并不会使用整个用户地址空间，Xv6 会将未使用的页表项的 PTE_V 标志位清零。
+- sbrk is the system call for a process to shrink or grow its memory.
+- **exec**:exec is a system call that replaces a process’s user address space with data read from a file, called
+a binary or executable file. A binary is typically the output of the compiler and linker, and holds
+machine instructions and program data.
+  - **exec** 是一种系统调用，作用是用可执行文件（二进制文件）的数据替换进程的用户地址空间。
+  - exec 先通过 namei 打开指定二进制文件，再读取其 ELF 头部。
+  - Xv6 采用通用 ELF 格式，文件结构为 ELF 头（elfhdr）+ 程序段头（proghdr）序列。
+  - Xv6 程序包含两个程序段，分别对应指令和数据。
+  - 第一步快速校验文件是否可能为ELF二进制文件。
+  - ELF二进制文件以4字节魔数`0x7F, 'E', 'L', 'F'`（即ELF_MAGIC）开头。
+  - 若ELF头部魔数正确，exec即认为该二进制格式合法。
+  - exec 执行流程要点：
+    1. 调用 `proc_pagetable` 分配无用户映射的新页表；
+    2. 通过 `uvmalloc` 为各 ELF 段分配内存；
+    3. 调用 `loadseg` 将各段加载至内存；
+    4. `loadseg` 借助 `walkaddr` 获取物理地址，通过 `readi` 从文件读取数据。
+  - 如何checker ？
+    - 地址溢出检查 if(ph.vaddr + ph.memsz < ph.vaddr)：确保程序头中 vaddr + memsz 不会超过 64 位无符号整数的范围。如果发生回绕（例如 vaddr = 0xfffffffffffff000，memsz = 0x1000，和变成 0），则拒绝加载。
+    - 段地址对齐与范围检查：确保 ph.vaddr 是页对齐的（通常 PAGE_SIZE），并且 ph.memsz 不会导致超出用户地址空间的最大地址（例如 RISC‑V Sv39 中用户空间最大为 0x3fffff000）。
+    - 权限检查：只允许 PT_LOAD 类型的段，并且根据 flags 设置正确的 PTE 权限（r-x 或 rw-），不允许同时可写可执行（W^X）。
+    - 单独的内核页表：在 RISC‑V 版本中，内核拥有独立的页表，用户进程的页表不包含内核内存映射。因此，即使恶意 ELF 指定 vaddr 等于某个内核地址，loadseg 也会因为用户页表中没有对应映射而失败（或者写入的是用户页表自身的物理页，不会触及内核）。这从根本上隔离了用户与内核。
+
+  ```
+  // File header
+  struct elfhdr {
+    uint magic;  // must equal ELF_MAGIC
+    uchar elf[12];
+    ushort type;
+    ushort machine;
+    uint version;
+    uint64 entry;
+    uint64 phoff;
+    uint64 shoff;
+    uint flags;
+    ushort ehsize;
+    ushort phentsize;
+    ushort phnum;
+    ushort shentsize;
+    ushort shnum;
+    ushort shstrndx;
+  };
+  ```
+  
+| 概念 | 解释 |
+|------|------|
+| `vaddr` | 程序期望的虚拟地址（在 xv6 中，用户地址空间从 0 开始） |
+| `off` | 段内容在 ELF 文件中的偏移 |
+| `filesz` | 需要从文件读取的字节数（通常对应 `.text` 和 `.data`） |
+| `memsz` | 在内存中占用的总字节数（可能包含 `.bss` 等需要零初始化的部分） |
+| 当 `filesz < memsz` | 加载器分配 `memsz` 空间，读入 `filesz` 字节，其余清零（BSS 段） |
+| 权限 | `r-x` 用于代码，`rw-` 用于数据 |
+
+#### real world
+- xv6 借助分页硬件实现内存保护与地址映射，但其分页应用远不如主流操作系统复杂（后者会结合页异常机制，第4章详述）。
+- xv6 内核采用虚拟-物理地址直接映射，并假定内核加载于物理地址 0x8000000，适配 QEMU 但不适用于真实硬件；成熟内核会通过页表适配硬件物理地址布局。
+- RISC-V 支持物理地址保护与超大页，xv6 均未使用；小页适合内存紧张场景，大页可降低页表开销，适合大内存环境。
+- xv6 内核无小型对象内存分配器，仅分配 4096 字节块，无法使用需动态分配的复杂数据结构，真实内核需支持大小块分配。
+- 内存分配核心问题为高效利用有限空间与应对未知请求，当前更注重分配速度而非空间利用率。
 #### further reading
 - https://github.com/mit-pdos/xv6-riscv/blob/riscv//kernel/memlayout.h
+- - https://github.com/mit-pdos/xv6-riscv/blob/riscv/kernel/vm.c
 #### QA
   - 为什么需要页表 ？
       #### 📚 问题：为什么需要多级页表？

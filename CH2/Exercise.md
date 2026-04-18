@@ -9,6 +9,9 @@ Add a system call to xv6 that returns the amount of free memory available.
   make
   make qemu
   ```
+- 运行
+  <img width="420" height="60" alt="image" src="https://github.com/user-attachments/assets/02b09ab6-a117-4a97-aa9a-2ce6f12c4338" />
+
   ```patch
   cat 0001-exercise-2.patch
   From 97153221b83c752031788004d368227a5db82190 Mon Sep 17 00:00:00 2001

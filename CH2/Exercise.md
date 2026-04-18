@@ -3,13 +3,13 @@ Add a system call to xv6 that returns the amount of free memory available.
 
 #### 实现
 - 启动xv6 on mac:
-  ```
+  ```bash
   git clone git@github.com:mit-pdos/xv6-public.git
   brew install i686-elf-gcc # install cross compiler chain
   make
   make qemu
   ```
-  ```
+  ```patch
   cat 0001-exercise-2.patch
   From 97153221b83c752031788004d368227a5db82190 Mon Sep 17 00:00:00 2001
   From: feng <feng@fengdeMacBook-Pro.local>

@@ -1,4 +1,4 @@
-- riscv硬件极简主义，负责交给软件处理
+- riscv硬件极简主义，复杂交给软件处理
 - three kinds of event which cause the CPU to set aside ordinary execution of instructions
 and force a transfer of control to special code that handles the event.
   - One situation is a system

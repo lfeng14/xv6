@@ -10,8 +10,8 @@ divide by zero or use an invalid virtual address.
 device signals that it needs attention, for example when the disk hardware finishes a read or write
 request.
 - CPU 会暂停常规指令执行、跳转至专用处理代码的事件分三类：
-1. **系统调用**：用户程序执行 ecall 指令，请求内核提供服务。
-2. **异常**：用户或内核指令出现非法操作，如除零、访问无效虚拟地址。
+1. **系统调用**：**用户态**执行 ecall 指令，请求内核提供服务。
+2. **异常**：用户态或内核态指令出现非法操作，如除零、访问无效虚拟地址。
 3. **设备中断**：硬件设备发出请求信号，如磁盘完成读写。
 - 本书将各类异常情形统称为**陷阱（trap）**。
   - 陷阱触发时正在执行的程序需**无感知恢复执行**，保持透明性，设备中断尤其需要这一特性。

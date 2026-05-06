@@ -184,85 +184,102 @@ sleep lock 允许等待时让出 CPU，所以适合长操作。
   ```
 - 如何理解：因为我们直接 lock; do something; unlock;那么如何对应上acquire release ?
   
-  可以把它理解成：**`lock; do something; unlock` 是程序员的逻辑写法，而 `acquire/release` 是把这件事真正落到硬件上的实现接口。**  
-  也就是说，`lock` 不是一条真实指令，真实发生的是 `acquire()` 把锁“原子地拿到”，`release()` 把锁“原子地放掉”。 [mit-public-courses-cn-translatio.gitbook](https://mit-public-courses-cn-translatio.gitbook.io/mit6-s081/lec10-multiprocessors-and-locking/10.7-spin-lock-1)
-  
-  #### 对应关系
-  
-  你写的伪代码：
-  
-  ```c
-  lock;
-  do something;
-  unlock;
-  ```
-  
-  在 xv6 里通常对应成：
-  
-  ```c
-  acquire(&lk);
-  do something;
-  release(&lk);
-  ```
-  
-  这里的关键不是名字，而是语义：
-  
-  - `acquire`：一直尝试，直到**原子地**把 `lk->locked` 从 0 改成 1。
-  - `release`：**原子地**把 `lk->locked` 设回 0。 [pdos.csail.mit](https://pdos.csail.mit.edu/6.828/2008/lec/l-lock.html)
-  
-  #### 为什么必须“原子地”
-  
-  如果只是普通代码：
-  
-  ```c
-  if(lk->locked == 0)
-    lk->locked = 1;
-  ```
-  
-  两个 CPU 可能同时看到 0，然后都把它改成 1，结果两个 CPU 都以为自己拿到了锁，这就失去互斥了。  
-  所以 `acquire` 不能只是“检查再赋值”，而必须让“检查 + 修改”成为一个不可分割的动作。 [mit-public-courses-cn-translatio.gitbook](https://mit-public-courses-cn-translatio.gitbook.io/mit6-s081/lec10-multiprocessors-and-locking/10.7-spin-lock-1)
-  
-  #### `acquire` 实际做了什么
-  
-  `acquire` 的本质是一个循环：
-  
-  1. 用原子交换指令尝试把锁值改成 1。
-  2. 如果返回值说明原来已经被别人拿走了，就继续等。
-  3. 如果返回 0，说明你拿到了锁。 [pdos.csail.mit](https://pdos.csail.mit.edu/6.828/2008/lec/l-lock.html)
-  
-  所以你可以把它理解成：
-  
-  - **逻辑上**：`lock`
-  - **实现上**：`acquire()` + 原子交换 + 忙等 + 内存屏障
-  
-  #### `release` 实际做了什么
-  
-  `release` 刚好相反：
-  
-  1. 先确认当前确实持有锁。
-  2. 再把锁状态原子地改回 0。
-  3. 让别的 CPU 之后可以成功 `acquire`。 [mit-public-courses-cn-translatio.gitbook](https://mit-public-courses-cn-translatio.gitbook.io/mit6-s081/lec10-multiprocessors-and-locking/10.7-spin-lock-1)
-  
-  所以你写的 `unlock`，对应的就是 `release()`。
-  
-  #### 一个更准确的理解方式
-  
-  可以把它看成两层：
-  
-  ##### 1. 抽象层
-  你只关心：
-  
-  - 进入临界区前先拿锁
-  - 退出临界区后放锁
-  
-  ##### 2. 机器层
-  系统必须保证：
-  
-  - 拿锁不是普通赋值，而是原子操作
-  - 放锁也不是普通赋值，而是原子操作
-  - 临界区内的读写不能被编译器/CPU 随便重排。 [pdos.csail.mit](https://pdos.csail.mit.edu/6.828/2008/lec/l-lock.html)
-  
-  #### 你可以记成一句话
-  
-  **`lock/unlock` 是“我想要互斥”的语义，`acquire/release` 是“系统用原子指令把互斥实现出来”的机制。** [mit-public-courses-cn-translatio.gitbook](https://mit-public-courses-cn-translatio.gitbook.io/mit6-s081/lec10-multiprocessors-and-locking/10.7-spin-lock-1)
-  
+     可以把它理解成：**`lock; do something; unlock` 是程序员的逻辑写法，而 `acquire/release` 是把这件事真正落到硬件上的实现接口。**  
+     也就是说，`lock` 不是一条真实指令，真实发生的是 `acquire()` 把锁“原子地拿到”，`release()` 把锁“原子地放掉”。 [mit-public-courses-cn-translatio.gitbook](https://mit-public-courses-cn-translatio.gitbook.io/mit6-s081/lec10-multiprocessors-and-locking/10.7-spin-lock-1)
+     
+     #### 对应关系
+     
+     你写的伪代码：
+     
+     ```c
+     lock;
+     do something;
+     unlock;
+     ```
+     
+     在 xv6 里通常对应成：
+     
+     ```c
+     acquire(&lk);
+     do something;
+     release(&lk);
+     ```
+     
+     这里的关键不是名字，而是语义：
+     
+     - `acquire`：一直尝试，直到**原子地**把 `lk->locked` 从 0 改成 1。
+     - `release`：**原子地**把 `lk->locked` 设回 0。 [pdos.csail.mit](https://pdos.csail.mit.edu/6.828/2008/lec/l-lock.html)
+     
+     #### 为什么必须“原子地”
+     
+     如果只是普通代码：
+     
+     ```c
+     if(lk->locked == 0)
+       lk->locked = 1;
+     ```
+     
+     两个 CPU 可能同时看到 0，然后都把它改成 1，结果两个 CPU 都以为自己拿到了锁，这就失去互斥了。  
+     所以 `acquire` 不能只是“检查再赋值”，而必须让“检查 + 修改”成为一个不可分割的动作。 [mit-public-courses-cn-translatio.gitbook](https://mit-public-courses-cn-translatio.gitbook.io/mit6-s081/lec10-multiprocessors-and-locking/10.7-spin-lock-1)
+     
+     #### `acquire` 实际做了什么
+     
+     `acquire` 的本质是一个循环：
+     
+     1. 用原子交换指令尝试把锁值改成 1。
+     2. 如果返回值说明原来已经被别人拿走了，就继续等。
+     3. 如果返回 0，说明你拿到了锁。 [pdos.csail.mit](https://pdos.csail.mit.edu/6.828/2008/lec/l-lock.html)
+     
+     所以你可以把它理解成：
+     
+     - **逻辑上**：`lock`
+     - **实现上**：`acquire()` + 原子交换 + 忙等 + 内存屏障
+     
+     #### `release` 实际做了什么
+     
+     `release` 刚好相反：
+     
+     1. 先确认当前确实持有锁。
+     2. 再把锁状态原子地改回 0。
+     3. 让别的 CPU 之后可以成功 `acquire`。 [mit-public-courses-cn-translatio.gitbook](https://mit-public-courses-cn-translatio.gitbook.io/mit6-s081/lec10-multiprocessors-and-locking/10.7-spin-lock-1)
+     
+     所以你写的 `unlock`，对应的就是 `release()`。
+     
+     #### 一个更准确的理解方式
+     
+     可以把它看成两层：
+     
+     ##### 1. 抽象层
+     你只关心：
+     
+     - 进入临界区前先拿锁
+     - 退出临界区后放锁
+     
+     ##### 2. 机器层
+     系统必须保证：
+     
+     - 拿锁不是普通赋值，而是原子操作
+     - 放锁也不是普通赋值，而是原子操作
+     - 临界区内的读写不能被编译器/CPU 随便重排。 [pdos.csail.mit](https://pdos.csail.mit.edu/6.828/2008/lec/l-lock.html)
+     
+     #### 你可以记成一句话
+     
+     **`lock/unlock` 是“我想要互斥”的语义，`acquire/release` 是“系统用原子指令把互斥实现出来”的机制。** [mit-public-courses-cn-translatio.gitbook](https://mit-public-courses-cn-translatio.gitbook.io/mit6-s081/lec10-multiprocessors-and-locking/10.7-spin-lock-1)
+     
+- 解释 kalloc：一个 free list + 一把锁，简单但竞争大 ？
+     
+     在 xv6 的原始设计中，内存分配器 (`kalloc`) 使用一个**全局的空闲链表 (`freelist`)** 和**一把全局锁 (`kmem.lock`)**。这种设计虽然逻辑清晰，但在多核高并发场景下存在严重的性能瓶颈。 [cnblogs](https://www.cnblogs.com/lilpig/p/17260254.html)
+   
+   - 为什么竞争大（瓶颈所在）
+   1.  **串行化执行**：无论哪个 CPU 需要分配或释放内存，都必须争抢同一把 `kmem.lock`。即使多个 CPU 之间并没有真实的内存资源冲突，它们也被迫排队。 [juejin](https://juejin.cn/post/7496345865217966116)
+   2.  **锁争用（Lock Contention）**：当系统负载变高、频繁调用 `kalloc` 或 `kfree` 时，CPU 会把大量时间浪费在“自旋（spinning）”等待锁上，而不是执行实际的内存管理工作，造成 CPU 资源浪费。 [cloud.tencent](https://cloud.tencent.com/developer/article/2142304)
+   3.  **缓存抖动**：因为所有 CPU 都在频繁抢占同一个内存地址（锁变量），这会导致该锁所在的缓存行在各个 CPU 的 L1/L2 缓存之间高速频繁地“乒乓”迁移，导致硬件性能急剧下降。 [juejin](https://juejin.cn/post/7496345865217966116)
+   
+   - 如何优化（核心思路）
+   为了解决这一问题，可以将“全局资源”转变为“局部资源”，这也是操作系统优化的常用范式： [cloud.tencent](https://cloud.tencent.com/developer/article/2142304)
+   
+   - **按 CPU 拆分**：为每个 CPU 创建独立的 `freelist`，并配备独立的 `kmem[NCPU].lock`。 [blog.miigon](https://blog.miigon.net/posts/s081-lab8-locks/)
+   - **减少冲突**：大部分情况下，CPU 只在自己的 `freelist` 上操作，无需跨 CPU 争抢，从而实现了真正的并行分配。 [juejin](https://juejin.cn/post/7496345865217966116)
+   - **“偷取”机制（Stealing）**：如果某个 CPU 的本地 `freelist` 空了，才去尝试从其他 CPU 的 `freelist` 中“偷”一些页出来。这样既保留了并行性，又保证了内存资源的全局调度。 [blog.csdn](https://blog.csdn.net/John_Snowww/article/details/139245029)
+   
+   这种**从单一全局锁到分片（Per-CPU）锁**的演进，是操作系统内核设计中解决高并发锁争用的经典案例。 [cloud.tencent](https://cloud.tencent.com/developer/article/2142304)

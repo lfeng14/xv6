@@ -1,3 +1,5 @@
+<img width="600" height="350" alt="image" src="https://github.com/user-attachments/assets/39effa51-2ccb-48ca-884b-cfc8c6f85375" />
+
 下面我给你把这段 xv6 的 **Locking** 章节梳理成“**大纲 + 重点 + 易考点**”三个层次，方便你复习。 [cse.iitd.ac](https://www.cse.iitd.ac.in/~sbansal/os/previous_years/2011/xv6-book/lock.pdf)
 
 ## 一、章节大纲

@@ -1,4 +1,4 @@
-# [xv6](https://xv6-guide.github.io/xv6-riscv-book/Ch8.html) 总结
+# [xv6](https://xv6-guide.github.io/xv6-riscv-book/) 总结
 
 ## 关于xv6
 
